@@ -1,8 +1,6 @@
 import streamlit as st
 import numpy as np
-import pandas as pd
 import matplotlib.pyplot as plt
-
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, Image
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import getSampleStyleSheet
@@ -31,7 +29,7 @@ st.sidebar.header("🔧 Parámetros de entrada")
 
 canal_tipo = st.sidebar.selectbox(
     "Tipo de canal",
-    ["Trapezoidal", "Alcantarilla redonda", "Surco rectangular"]
+    ["Trapezoidal", "Surco rectangular"]
 )
 
 Q = st.sidebar.number_input("Caudal (m³/s)", min_value=0.01, value=1.0, step=0.01)
@@ -53,8 +51,6 @@ else:
 if canal_tipo == "Trapezoidal":
     b = st.sidebar.number_input("Base (m)", min_value=0.1, value=0.5)
     z = st.sidebar.number_input("Talud lateral (z = H/V)", min_value=0.0, value=1.0)
-elif canal_tipo == "Alcantarilla redonda":
-    D = st.sidebar.number_input("Diámetro (m)", min_value=0.1, value=1.0)
 elif canal_tipo == "Surco rectangular":
     b = st.sidebar.number_input("Base (m)", min_value=0.1, value=0.5)
     h = st.sidebar.number_input("Altura (m)", min_value=0.1, value=0.3)
@@ -84,24 +80,17 @@ with st.expander("📘 Ayuda teórica"):
 dy = 0.001
 max_iter = 100000
 
-def calcular_tirante(Q, b=0, z=0, D=0, h=0, tipo="Trapezoidal"):
+def calcular_tirante(Q, b=0, z=0, h=0, tipo="Trapezoidal"):
     y = dy
     for _ in range(max_iter):
         if tipo == "Trapezoidal":
             A = (b + z*y) * y
             P = b + 2*y*np.sqrt(1+z**2)
             T = b + 2*z*y
-        elif tipo == "Alcantarilla redonda":
-            A = np.pi * D**2 / 4
-            P = np.pi * D
-            T = D
         elif tipo == "Surco rectangular":
             A = b * h
             P = b + 2*h
             T = b
-        else:
-            raise ValueError("Tipo de canal desconocido")
-        
         R = A / P
         V = (1/n) * R**(2/3) * (S/100)**0.5
         Q_calc = A * V
@@ -120,8 +109,6 @@ def calcular_tirante(Q, b=0, z=0, D=0, h=0, tipo="Trapezoidal"):
 # ===============================
 if canal_tipo == "Trapezoidal":
     y, A, P, R, V, Fr, Vc, Sc, Qmax = calcular_tirante(Q, b=b, z=z, tipo="Trapezoidal")
-elif canal_tipo == "Alcantarilla redonda":
-    y, A, P, R, V, Fr, Vc, Sc, Qmax = calcular_tirante(Q, D=D, tipo="Alcantarilla redonda")
 else:
     y, A, P, R, V, Fr, Vc, Sc, Qmax = calcular_tirante(Q, b=b, h=h, tipo="Surco rectangular")
 
@@ -149,10 +136,11 @@ st.write(f"- Velocidad crítica (Vc): {round(Vc,3)} m/s")
 # Gráfica
 # ===============================
 fig, ax = plt.subplots(figsize=(8,4))
-x = np.linspace(0, 10, 50)
+# Perfil de tirante uniforme
+x = np.linspace(0, 10, 50)  # longitud del canal
 y_line = np.full_like(x, y)
-ax.plot(x, y_line, label="Tirante", color="#1f77b4")
-ax.axhline(y, color="red", linestyle="--", label="Tirante normal")
+ax.plot(x, y_line, label="Tirante normal", color="#1f77b4", linewidth=2)
+ax.fill_between(x, 0, y_line, color="#aec7e8", alpha=0.4)
 ax.set_xlabel("Longitud (m)")
 ax.set_ylabel("Tirante (m)")
 ax.set_title(f"Tirante nominal - {canal_tipo}")
