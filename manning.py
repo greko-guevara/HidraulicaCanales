@@ -1,6 +1,8 @@
 import streamlit as st
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
+
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, Image
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import getSampleStyleSheet
@@ -26,7 +28,6 @@ st.markdown(
 # Sidebar - Entradas
 # ===============================
 st.sidebar.header("🔧 Parámetros de entrada")
-
 canal_tipo = st.sidebar.selectbox(
     "Tipo de canal",
     ["Trapezoidal", "Surco rectangular"]
@@ -60,7 +61,9 @@ elif canal_tipo == "Surco rectangular":
 # ===============================
 with st.expander("📘 Ayuda teórica"):
     st.markdown("### Fórmulas principales")
-    st.latex(r"Q = \frac{1}{n} A R^{2/3} S^{1/2} \quad ; \quad R = \frac{A}{P}")
+    st.latex(r"""
+    Q = \frac{1}{n} A R^{2/3} S^{1/2} \quad ; \quad R = \frac{A}{P}
+    """)
     st.latex(r"V = \frac{Q}{A} \quad ; \quad F_r = \frac{V}{\sqrt{g \cdot A / T}}")
     st.markdown("""
     **Donde:**  
@@ -71,11 +74,10 @@ with st.expander("📘 Ayuda teórica"):
     - V: velocidad (m/s)  
     - Fr: número de Froude  
     - S: pendiente del canal (m/m)  
-    - T: ancho superficial (m) para cálculo de Fr
     """)
 
 # ===============================
-# Función de cálculo
+# Función general para calcular tirante normal
 # ===============================
 dy = 0.001
 max_iter = 100000
@@ -84,36 +86,44 @@ def calcular_tirante(Q, b=0, z=0, h=0, tipo="Trapezoidal"):
     y = dy
     for _ in range(max_iter):
         if tipo == "Trapezoidal":
-            A = (b + z*y) * y
-            P = b + 2*y*np.sqrt(1+z**2)
-            T = b + 2*z*y
+            A = (b + z*y)*y
+            P = b + 2*y*np.sqrt(1 + z**2)
         elif tipo == "Surco rectangular":
-            A = b * h
+            A = b*h
             P = b + 2*h
-            T = b
         R = A / P
-        V = (1/n) * R**(2/3) * (S/100)**0.5
+        V = (1/n) * R**(2/3) * (S/100)**0.5  # Manning
         Q_calc = A * V
         if Q_calc >= Q:
             break
-        y += dy
-    
+        if tipo=="Trapezoidal":
+            y += dy
+    # Froude
+    if tipo=="Trapezoidal":
+        T = b + 2*z*y
+    else:
+        T = b
     Fr = V / np.sqrt(g * A / T)
-    Vc = np.sqrt(g * A / T)
-    Sc = ((Vc * n) / R**(2/3))**2
-    Qmax = A * Vc
-    return y, A, P, R, V, Fr, Vc, Sc, Qmax
+    return y, A, P, R, V, Fr
 
 # ===============================
-# Ejecutar cálculo según tipo
+# Cálculos
 # ===============================
 if canal_tipo == "Trapezoidal":
-    y, A, P, R, V, Fr, Vc, Sc, Qmax = calcular_tirante(Q, b=b, z=z, tipo="Trapezoidal")
+    y, A, P, R, V, Fr = calcular_tirante(Q, b=b, z=z, tipo="Trapezoidal")
+elif canal_tipo == "Surco rectangular":
+    y, A, P, R, V, Fr = calcular_tirante(Q, b=b, h=h, tipo="Surco rectangular")
+
+# Velocidad crítica y pendiente crítica
+if canal_tipo == "Trapezoidal":
+    Vc = np.sqrt(g*A/(b + 2*z*y))
 else:
-    y, A, P, R, V, Fr, Vc, Sc, Qmax = calcular_tirante(Q, b=b, h=h, tipo="Surco rectangular")
+    Vc = np.sqrt(g*A/b)
+Sc = ((Vc*n)/R**(2/3))**2
+Qmax = A * Vc
 
 # ===============================
-# Resultados principales
+# Resultados
 # ===============================
 st.header("🔹 Resultados principales")
 col1, col2 = st.columns(2)
@@ -124,7 +134,6 @@ with col2:
     st.metric("Velocidad (m/s)", round(V,3))
     st.metric("Número Froude", round(Fr,3))
 
-# Resultados secundarios
 st.header("🔹 Resultados secundarios")
 st.write(f"- Perímetro mojado (P): {round(P,3)} m")
 st.write(f"- Radio hidráulico (R): {round(R,3)} m")
@@ -133,21 +142,38 @@ st.write(f"- Pendiente crítica (Sc): {round(Sc*100,3)} %")
 st.write(f"- Velocidad crítica (Vc): {round(Vc,3)} m/s")
 
 # ===============================
-# Gráfica
+# Gráficos
 # ===============================
-fig, ax = plt.subplots(figsize=(8,4))
-# Perfil de tirante uniforme
-x = np.linspace(0, 10, 50)  # longitud del canal
-y_line = np.full_like(x, y)
-ax.plot(x, y_line, label="Tirante normal", color="#1f77b4", linewidth=2)
-ax.fill_between(x, 0, y_line, color="#aec7e8", alpha=0.4)
-ax.set_xlabel("Longitud (m)")
-ax.set_ylabel("Tirante (m)")
-ax.set_title(f"Tirante nominal - {canal_tipo}")
-ax.legend()
-ax.grid(True, linestyle=":", alpha=0.7)
-st.pyplot(fig)
-fig.savefig("grafico_canales.png", dpi=300)
+if canal_tipo == "Trapezoidal":
+    st.header("📈 Perfil del canal trapezoidal")
+    fig, ax = plt.subplots(figsize=(8,4))
+    # Base
+    ax.plot([-b/2, b/2], [0,0], color='brown', linewidth=4, label="Base")
+    # Taludes
+    ax.plot([-b/2, -b/2 - z*y], [0, y], color='blue', linewidth=2, label="Taludes")
+    ax.plot([b/2, b/2 + z*y], [0, y], color='blue', linewidth=2)
+    # Tirante
+    ax.hlines(y, -b/2 - z*y, b/2 + z*y, color='green', linestyle='--', label="Tirante normal")
+    ax.set_xlabel("m")
+    ax.set_ylabel("m")
+    ax.set_title("Sección transversal – Canal trapezoidal")
+    ax.legend()
+    ax.grid(True, linestyle=":", alpha=0.7)
+    st.pyplot(fig)
+    fig.savefig("grafico_canal.png", dpi=150)
+else:  # Surco rectangular
+    st.header("📈 Perfil del surco rectangular")
+    fig, ax = plt.subplots(figsize=(8,4))
+    ax.plot([0,b],[0,0], color='brown', linewidth=4, label="Base")
+    ax.vlines([0,b], 0, h, color='blue', linewidth=2, label="Paredes")
+    ax.hlines(h,0,b,color='green', linestyle='--', label="Tirante normal")
+    ax.set_xlabel("m")
+    ax.set_ylabel("m")
+    ax.set_title("Sección transversal – Surco rectangular")
+    ax.legend()
+    ax.grid(True, linestyle=":", alpha=0.7)
+    st.pyplot(fig)
+    fig.savefig("grafico_canal.png", dpi=150)
 
 # ===============================
 # PDF One Page
@@ -161,12 +187,12 @@ if st.button("📥 Generar PDF"):
                             topMargin=36, bottomMargin=36)
     styles = getSampleStyleSheet()
     e = []
-
+    
     e.append(Paragraph("<b>Diseño de Canales – Flujo Nominal</b>", styles["Title"]))
     e.append(Paragraph(f"Tipo de canal: {canal_tipo} | Material: {material}", styles["Normal"]))
     e.append(Paragraph(f"Caudal: {Q} m³/s | Pendiente: {S} %", styles["Normal"]))
     e.append(Spacer(1,6))
-
+    
     # Principales
     e.append(Paragraph("<b>Resultados principales</b>", styles["Heading3"]))
     table_main = Table([
@@ -174,7 +200,7 @@ if st.button("📥 Generar PDF"):
         [round(y,3), round(A,3), round(V,3), round(Fr,3)]
     ])
     e.append(table_main)
-
+    
     # Secundarios
     e.append(Spacer(1,6))
     e.append(Paragraph("<b>Resultados secundarios</b>", styles["Heading3"]))
@@ -183,10 +209,10 @@ if st.button("📥 Generar PDF"):
         [round(P,3), round(R,3), round(Qmax,3), round(Sc*100,3), round(Vc,3)]
     ])
     e.append(table_sec)
-
+    
     e.append(Spacer(1,8))
-    e.append(Image("grafico_canales.png", width=14*cm, height=7*cm))
-
+    e.append(Image("grafico_canal.png", width=14*cm, height=7*cm))
+    
     doc.build(e)
     st.success("📄 PDF generado correctamente")
     st.download_button("⬇️ Descargar PDF", open(pdf, "rb"), file_name=pdf)
