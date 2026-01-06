@@ -87,10 +87,6 @@ def calcular_tirante(Q, b, z):
 
 y, A, P, R, V, Fr = calcular_tirante(Q, b, z)
 
-# Velocidad crítica y pendiente crítica
-Vc = np.sqrt(g*A/(b + 2*z*y))
-Sc = ((Vc*n)/R**(2/3))**2
-Qmax = A * Vc
 
 # ===============================
 # Resultados
@@ -107,9 +103,6 @@ with col2:
 st.header("🔹 Resultados secundarios")
 st.write(f"- Perímetro mojado (P): {round(P,3)} m")
 st.write(f"- Radio hidráulico (R): {round(R,3)} m")
-st.write(f"- Caudal máximo (Qmax): {round(Qmax,3)} m³/s")
-st.write(f"- Pendiente crítica (Sc): {round(Sc*100,3)} %")
-st.write(f"- Velocidad crítica (Vc): {round(Vc,3)} m/s")
 
 # ===============================
 # Gráfico
@@ -160,8 +153,8 @@ if st.button("📥 Generar PDF"):
     e.append(Spacer(1,6))
     e.append(Paragraph("<b>Resultados secundarios</b>", styles["Heading3"]))
     table_sec = Table([
-        ["P (m)", "R (m)", "Qmax (m³/s)", "Pendiente crítica (%)", "Vc (m/s)"],
-        [round(P,3), round(R,3), round(Qmax,3), round(Sc*100,3), round(Vc,3)]
+        ["P (m)", "R (m)"],
+        [round(P,3), round(R,3) ]
     ])
     e.append(table_sec)
     
