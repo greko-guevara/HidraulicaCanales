@@ -1,8 +1,6 @@
 import streamlit as st
 import numpy as np
-import pandas as pd
 import matplotlib.pyplot as plt
-
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, Image
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import getSampleStyleSheet
@@ -14,13 +12,13 @@ g = 9.81  # gravedad
 # Configuración de página
 # ===============================
 st.set_page_config(
-    page_title="Canales en Flujo Nominal",
+    page_title="Canal Trapezoidal – Flujo Nominal",
     layout="wide"
 )
 
-st.title("🌊 Diseño de canales en flujo nominal")
+st.title("🌊 Diseño de canal trapezoidal en flujo nominal")
 st.markdown(
-    "**Cálculo hidráulico de canales**  \n"
+    "**Cálculo hidráulico de canal trapezoidal**  \n"
     "Prof. Gregory Guevara — Riego & Drenaje / Universidad EARTH"
 )
 
@@ -28,17 +26,15 @@ st.markdown(
 # Sidebar - Entradas
 # ===============================
 st.sidebar.header("🔧 Parámetros de entrada")
-canal_tipo = st.sidebar.selectbox(
-    "Tipo de canal",
-    ["Trapezoidal", "Surco rectangular"]
-)
 
 Q = st.sidebar.number_input("Caudal (m³/s)", min_value=0.01, value=1.0, step=0.01)
 S = st.sidebar.number_input("Pendiente del canal (%)", min_value=0.01, value=0.5, step=0.01)
 
-# Material rugosidad (coeficiente Manning)
+b = st.sidebar.number_input("Base del canal (m)", min_value=0.1, value=0.5)
+z = st.sidebar.number_input("Talud lateral (z = H/V)", min_value=0.0, value=1.0)
+
 material = st.sidebar.selectbox(
-    "Material",
+    "Material del canal",
     ["Concreto", "Tierra uniforme", "Suelo expuesto"]
 )
 if material == "Concreto":
@@ -47,14 +43,6 @@ elif material == "Tierra uniforme":
     n = 0.025
 else:
     n = 0.032
-
-# Parámetros geométricos según tipo de canal
-if canal_tipo == "Trapezoidal":
-    b = st.sidebar.number_input("Base (m)", min_value=0.1, value=0.5)
-    z = st.sidebar.number_input("Talud lateral (z = H/V)", min_value=0.0, value=1.0)
-elif canal_tipo == "Surco rectangular":
-    b = st.sidebar.number_input("Base (m)", min_value=0.1, value=0.5)
-    h = st.sidebar.number_input("Altura (m)", min_value=0.1, value=0.3)
 
 # ===============================
 # Ayuda teórica
@@ -77,48 +65,30 @@ with st.expander("📘 Ayuda teórica"):
     """)
 
 # ===============================
-# Función general para calcular tirante normal
+# Cálculos
 # ===============================
 dy = 0.001
 max_iter = 100000
 
-def calcular_tirante(Q, b=0, z=0, h=0, tipo="Trapezoidal"):
+def calcular_tirante(Q, b, z):
     y = dy
     for _ in range(max_iter):
-        if tipo == "Trapezoidal":
-            A = (b + z*y)*y
-            P = b + 2*y*np.sqrt(1 + z**2)
-        elif tipo == "Surco rectangular":
-            A = b*h
-            P = b + 2*h
+        A = (b + z*y) * y
+        P = b + 2*y*np.sqrt(1 + z**2)
         R = A / P
         V = (1/n) * R**(2/3) * (S/100)**0.5  # Manning
         Q_calc = A * V
         if Q_calc >= Q:
             break
-        if tipo=="Trapezoidal":
-            y += dy
-    # Froude
-    if tipo=="Trapezoidal":
-        T = b + 2*z*y
-    else:
-        T = b
+        y += dy
+    T = b + 2*z*y
     Fr = V / np.sqrt(g * A / T)
     return y, A, P, R, V, Fr
 
-# ===============================
-# Cálculos
-# ===============================
-if canal_tipo == "Trapezoidal":
-    y, A, P, R, V, Fr = calcular_tirante(Q, b=b, z=z, tipo="Trapezoidal")
-elif canal_tipo == "Surco rectangular":
-    y, A, P, R, V, Fr = calcular_tirante(Q, b=b, h=h, tipo="Surco rectangular")
+y, A, P, R, V, Fr = calcular_tirante(Q, b, z)
 
 # Velocidad crítica y pendiente crítica
-if canal_tipo == "Trapezoidal":
-    Vc = np.sqrt(g*A/(b + 2*z*y))
-else:
-    Vc = np.sqrt(g*A/b)
+Vc = np.sqrt(g*A/(b + 2*z*y))
 Sc = ((Vc*n)/R**(2/3))**2
 Qmax = A * Vc
 
@@ -142,54 +112,39 @@ st.write(f"- Pendiente crítica (Sc): {round(Sc*100,3)} %")
 st.write(f"- Velocidad crítica (Vc): {round(Vc,3)} m/s")
 
 # ===============================
-# Gráficos
+# Gráfico
 # ===============================
-if canal_tipo == "Trapezoidal":
-    st.header("📈 Perfil del canal trapezoidal")
-    fig, ax = plt.subplots(figsize=(8,4))
-    # Base
-    ax.plot([-b/2, b/2], [0,0], color='brown', linewidth=4, label="Base")
-    # Taludes
-    ax.plot([-b/2, -b/2 - z*y], [0, y], color='blue', linewidth=2, label="Taludes")
-    ax.plot([b/2, b/2 + z*y], [0, y], color='blue', linewidth=2)
-    # Tirante
-    ax.hlines(y, -b/2 - z*y, b/2 + z*y, color='green', linestyle='--', label="Tirante normal")
-    ax.set_xlabel("m")
-    ax.set_ylabel("m")
-    ax.set_title("Sección transversal – Canal trapezoidal")
-    ax.legend()
-    ax.grid(True, linestyle=":", alpha=0.7)
-    st.pyplot(fig)
-    fig.savefig("grafico_canal.png", dpi=150)
-else:  # Surco rectangular
-    st.header("📈 Perfil del surco rectangular")
-    fig, ax = plt.subplots(figsize=(8,4))
-    ax.plot([0,b],[0,0], color='brown', linewidth=4, label="Base")
-    ax.vlines([0,b], 0, h, color='blue', linewidth=2, label="Paredes")
-    ax.hlines(h,0,b,color='green', linestyle='--', label="Tirante normal")
-    ax.set_xlabel("m")
-    ax.set_ylabel("m")
-    ax.set_title("Sección transversal – Surco rectangular")
-    ax.legend()
-    ax.grid(True, linestyle=":", alpha=0.7)
-    st.pyplot(fig)
-    fig.savefig("grafico_canal.png", dpi=150)
+st.header("📈 Perfil del canal trapezoidal")
+fig, ax = plt.subplots(figsize=(8,4))
+# Base
+ax.plot([-b/2, b/2], [0,0], color='brown', linewidth=4, label="Base")
+# Taludes
+ax.plot([-b/2, -b/2 - z*y], [0, y], color='blue', linewidth=2, label="Taludes")
+ax.plot([b/2, b/2 + z*y], [0, y], color='blue', linewidth=2)
+# Tirante
+ax.hlines(y, -b/2 - z*y, b/2 + z*y, color='green', linestyle='--', label="Tirante normal")
+ax.set_xlabel("m")
+ax.set_ylabel("m")
+ax.set_title("Sección transversal – Canal trapezoidal")
+ax.legend()
+ax.grid(True, linestyle=":", alpha=0.7)
+st.pyplot(fig)
+fig.savefig("grafico_canal.png", dpi=150)
 
 # ===============================
 # PDF One Page
 # ===============================
 st.header("📄 Exportar memoria de cálculo (1 página)")
-
 if st.button("📥 Generar PDF"):
-    pdf = "Canales_FlujoNominal.pdf"
+    pdf = "Canal_Trapezoidal.pdf"
     doc = SimpleDocTemplate(pdf, pagesize=letter,
                             rightMargin=36, leftMargin=36,
                             topMargin=36, bottomMargin=36)
     styles = getSampleStyleSheet()
     e = []
     
-    e.append(Paragraph("<b>Diseño de Canales – Flujo Nominal</b>", styles["Title"]))
-    e.append(Paragraph(f"Tipo de canal: {canal_tipo} | Material: {material}", styles["Normal"]))
+    e.append(Paragraph("<b>Diseño de Canal Trapezoidal – Flujo Nominal</b>", styles["Title"]))
+    e.append(Paragraph(f"Material: {material}", styles["Normal"]))
     e.append(Paragraph(f"Caudal: {Q} m³/s | Pendiente: {S} %", styles["Normal"]))
     e.append(Spacer(1,6))
     
