@@ -109,7 +109,7 @@ if seccion == "Canal trapezoidal":
     z = st.sidebar.number_input("Talud z (H/V)", min_value=0.0, value=1.0)
     y, A, P, R, V, Fr = canal_trapezoidal(Q, b, z, S, n)
 
-    fig, ax = plt.subplots(figsize=(7,4))
+    fig, ax = plt.subplots(figsize=(5,3))
     ax.plot([-b/2, b/2], [0,0], linewidth=4, label="Base")
     ax.plot([-b/2, -b/2 - z*y], [0,y], label="Talud izquierdo")
     ax.plot([b/2, b/2 + z*y], [0,y], label="Talud derecho")
@@ -122,7 +122,7 @@ else:
     D = st.sidebar.number_input("Diámetro D (m)", min_value=0.2, value=1.0)
     y, A, P, R, V, Fr = alcantarilla_circular(Q, D, S, n)
 
-    fig, ax = plt.subplots(figsize=(6,4))
+    fig, ax = plt.subplots(figsize=(4,3))
     circle = plt.Circle((D/2,D/2), D/2, fill=False, linewidth=2, label="Alcantarilla")
     ax.add_patch(circle)
     ax.hlines(y, 0, D, linestyles="--", label="Tirante normal")
@@ -162,6 +162,7 @@ if st.button("📥 Generar PDF"):
     e = []
 
     e.append(Paragraph("<b>Memoria de cálculo hidráulico – Flujo nominal</b>", styles["Title"]))
+    e.append(Paragraph("Universidad EARTH | Riego & Drenaje", styles["Heading4"]))
     e.append(Paragraph(f"Tipo de sección: {seccion}", styles["Normal"]))
     e.append(Paragraph(f"Material: {material}", styles["Normal"]))
     e.append(Paragraph(f"Caudal Q = {Q} m³/s | Pendiente S = {S} %", styles["Normal"]))
