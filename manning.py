@@ -1,11 +1,15 @@
 import streamlit as st
 import numpy as np
 import matplotlib.pyplot as plt
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, Image
+from reportlab.lib.pagesizes import letter
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib.units import cm
 
 # ===============================
 # Constantes
 # ===============================
-g = 9.81  # gravedad
+g = 9.81
 
 # ===============================
 # Configuración Streamlit
@@ -34,24 +38,34 @@ seccion = st.sidebar.selectbox(
 # Entradas comunes
 # ===============================
 st.sidebar.header("🔧 Parámetros hidráulicos")
-
 Q = st.sidebar.number_input("Caudal Q (m³/s)", min_value=0.01, value=1.0, step=0.01)
 S = st.sidebar.number_input("Pendiente S (%)", min_value=0.01, value=0.5, step=0.01)
 
-material = st.sidebar.selectbox(
-    "Material",
-    ["Concreto", "Tierra uniforme", "Suelo expuesto"]
-)
+# ===============================
+# Material (con restricciones)
+# ===============================
+if seccion == "Canal trapezoidal":
+    material = st.sidebar.selectbox(
+        "Material del canal",
+        ["Concreto", "Tierra uniforme", "Suelo expuesto"]
+    )
+else:
+    material = st.sidebar.selectbox(
+        "Material de la alcantarilla",
+        ["Concreto", "Plástico (PVC / PEAD)"]
+    )
 
 if material == "Concreto":
     n = 0.014
+elif "Plástico" in material:
+    n = 0.011
 elif material == "Tierra uniforme":
     n = 0.025
 else:
     n = 0.032
 
 # ===============================
-# FUNCIONES HIDRÁULICAS
+# Funciones hidráulicas
 # ===============================
 def canal_trapezoidal(Q, b, z, S, n):
     dy = 0.001
@@ -61,8 +75,7 @@ def canal_trapezoidal(Q, b, z, S, n):
         P = b + 2*y*np.sqrt(1 + z**2)
         R = A / P
         V = (1/n) * R**(2/3) * (S/100)**0.5
-        Q_calc = A * V
-        if Q_calc >= Q:
+        if A * V >= Q:
             break
         y += dy
     T = b + 2*z*y
@@ -81,8 +94,7 @@ def alcantarilla_circular(Q, D, S, n):
         P = (D / 2) * theta
         R = A / P
         V = (1/n) * R**(2/3) * (S/100)**0.5
-        Q_calc = A * V
-        if Q_calc >= Q:
+        if A * V >= Q:
             break
         y += dy
     T = D * np.sin(theta/2)
@@ -90,44 +102,40 @@ def alcantarilla_circular(Q, D, S, n):
     return y, A, P, R, V, Fr
 
 # ===============================
-# CÁLCULO SEGÚN SECCIÓN
+# Cálculo
 # ===============================
 if seccion == "Canal trapezoidal":
-
-    st.sidebar.header("📏 Geometría del canal")
     b = st.sidebar.number_input("Base b (m)", min_value=0.1, value=0.5)
     z = st.sidebar.number_input("Talud z (H/V)", min_value=0.0, value=1.0)
-
     y, A, P, R, V, Fr = canal_trapezoidal(Q, b, z, S, n)
 
-    # Gráfico
     fig, ax = plt.subplots(figsize=(7,4))
-    ax.plot([-b/2, b/2], [0,0], color='brown', linewidth=4)
-    ax.plot([-b/2, -b/2 - z*y], [0, y], 'b')
-    ax.plot([b/2, b/2 + z*y], [0, y], 'b')
-    ax.hlines(y, -b/2 - z*y, b/2 + z*y, colors='green', linestyles='--')
-    ax.set_aspect('equal')
-    ax.set_title("Sección trapezoidal")
+    ax.plot([-b/2, b/2], [0,0], linewidth=4, label="Base")
+    ax.plot([-b/2, -b/2 - z*y], [0,y], label="Talud izquierdo")
+    ax.plot([b/2, b/2 + z*y], [0,y], label="Talud derecho")
+    ax.hlines(y, -b/2 - z*y, b/2 + z*y, linestyles="--", label="Tirante normal")
+    ax.set_title("Sección transversal – Canal trapezoidal")
+    ax.set_aspect("equal")
+    ax.legend()
     ax.grid(True, linestyle=":")
-
 else:
-
-    st.sidebar.header("📏 Geometría de la alcantarilla")
     D = st.sidebar.number_input("Diámetro D (m)", min_value=0.2, value=1.0)
-
     y, A, P, R, V, Fr = alcantarilla_circular(Q, D, S, n)
 
-    # Gráfico
     fig, ax = plt.subplots(figsize=(6,4))
-    circle = plt.Circle((D/2, D/2), D/2, fill=False, linewidth=2)
+    circle = plt.Circle((D/2,D/2), D/2, fill=False, linewidth=2, label="Alcantarilla")
     ax.add_patch(circle)
-    ax.hlines(y, 0, D, colors='green', linestyles='--')
-    ax.set_aspect('equal')
-    ax.set_title("Sección circular")
+    ax.hlines(y, 0, D, linestyles="--", label="Tirante normal")
+    ax.set_title("Sección transversal – Alcantarilla circular")
+    ax.set_aspect("equal")
+    ax.legend()
     ax.grid(True, linestyle=":")
 
+fig.savefig("seccion.png", dpi=150)
+st.pyplot(fig)
+
 # ===============================
-# RESULTADOS
+# Resultados
 # ===============================
 st.header("📊 Resultados hidráulicos")
 
@@ -142,4 +150,31 @@ with col2:
 st.write(f"**Perímetro mojado P:** {round(P,3)} m")
 st.write(f"**Radio hidráulico R:** {round(R,3)} m")
 
-st.pyplot(fig)
+# ===============================
+# PDF
+# ===============================
+st.header("📄 Exportar memoria de cálculo")
+
+if st.button("📥 Generar PDF"):
+    pdf = "Memoria_Hidraulica.pdf"
+    doc = SimpleDocTemplate(pdf, pagesize=letter)
+    styles = getSampleStyleSheet()
+    e = []
+
+    e.append(Paragraph("<b>Memoria de cálculo hidráulico – Flujo nominal</b>", styles["Title"]))
+    e.append(Paragraph(f"Tipo de sección: {seccion}", styles["Normal"]))
+    e.append(Paragraph(f"Material: {material}", styles["Normal"]))
+    e.append(Paragraph(f"Caudal Q = {Q} m³/s | Pendiente S = {S} %", styles["Normal"]))
+    e.append(Spacer(1,6))
+
+    table = Table([
+        ["y (m)", "A (m²)", "V (m/s)", "Fr", "P (m)", "R (m)"],
+        [round(y,3), round(A,3), round(V,3), round(Fr,3), round(P,3), round(R,3)]
+    ])
+    e.append(table)
+    e.append(Spacer(1,10))
+    e.append(Image("seccion.png", width=14*cm, height=7*cm))
+
+    doc.build(e)
+    st.success("PDF generado correctamente")
+    st.download_button("⬇️ Descargar PDF", open(pdf,"rb"), file_name=pdf)
