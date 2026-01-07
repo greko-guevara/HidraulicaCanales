@@ -31,7 +31,7 @@ st.markdown(
 st.sidebar.header("📐 Tipo de sección")
 seccion = st.sidebar.selectbox(
     "Seleccione la sección hidráulica",
-    ["Canal trapezoidal", "Alcantarilla circular (HEC-22)"]
+    ["Canal trapezoidal", "Alcantarilla circular"]
 )
 
 # ==========================================================
@@ -84,7 +84,7 @@ with st.expander("📘 Ayuda teórica"):
     st.latex(r"P = b + 2y\sqrt{1+z^2}")
     st.latex(r"T = b + 2zy")
 
-    st.markdown("### 🔹 Alcantarilla circular parcialmente llena (HEC-22)")
+    st.markdown("### 🔹 Alcantarilla circular parcialmente llena")
     st.latex(r"\theta = 2\cos^{-1}\left(\frac{r-y}{r}\right)")
     st.latex(r"A = \frac{r^2}{2}(\theta - \sin\theta)")
     st.latex(r"P = r\theta")
@@ -159,12 +159,12 @@ else:
     D = st.sidebar.number_input("Diámetro D (m)", min_value=0.3, value=1.0)
     y, A, P, R, V, Fr = alcantarilla_HEC22(Q, D, S, n)
 
-    fig, ax = plt.subplots(figsize=(5,5))
+    fig, ax = plt.subplots(figsize=(4,4))
     circle = plt.Circle((D/2, D/2), D/2, fill=False, linewidth=2)
     ax.add_patch(circle)
     ax.hlines(y, 0, D, linestyles="--", label="Tirante normal")
     ax.set_aspect("equal")
-    ax.set_title("Alcantarilla circular – HEC-22")
+    ax.set_title("Alcantarilla circular")
     ax.legend()
     ax.grid(True, linestyle=":")
 
@@ -202,6 +202,10 @@ if st.button("📥 Generar PDF"):
     e.append(Paragraph(f"Tipo de sección: {seccion}", styles["Normal"]))
     e.append(Paragraph(f"Material: {material}", styles["Normal"]))
     e.append(Paragraph(f"Q = {Q} m³/s | S = {S} %", styles["Normal"]))
+    if seccion == "Canal trapezoidal":
+        e.append(Paragraph(f"Base b = {b} b | Talud Z = {z} ", styles["Normal"]))
+    else:
+        e.append(Paragraph(f"Diaámetro = {D} m |", styles["Normal"]))
     e.append(Spacer(1,8))
 
     table = Table([
