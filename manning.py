@@ -163,18 +163,28 @@ def alcantarilla_circular(Q, D, S, n):
     dy = 0.001
     y = dy
     max_iter = 100000
+    r = D / 2
     for _ in range(max_iter):
-        r = D / 2
-        theta = 2 * np.arccos((r - y) / r)
-        A = (D**2 / 8 ) * (theta - np.sin(theta))
+        if y >= D:
+            break
+        # Protección arccos
+        arg = np.clip((r - y) / r, -1.0, 1.0)
+        theta = 2 * np.arccos(arg)
+        # Geometría
+        A = (r**2 / 2) * (theta - np.sin(theta))
         P = r * theta
+        if P == 0 or A == 0:
+            y += dy
+            continue
         R = A / P
         T = 2 * r * np.sin(theta / 2)
-        V = (1/n) * R**(2/3) * (S/100)**0.5  # Manning
+        # Manning (S en %)
+        V = (1 / n) * R**(2/3) * (S / 100)**0.5
         Q_calc = A * V
-        Fr = V / np.sqrt(g*A/T)
+        # Froude
+        Fr = V / np.sqrt(g * A / T)
         if Q_calc >= Q:
-            break
+            return y, A, P, R, V, Fr
         y += dy
     
     return y, A, P, R, V, Fr,
