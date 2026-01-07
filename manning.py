@@ -109,7 +109,7 @@ if seccion == "Canal trapezoidal":
     z = st.sidebar.number_input("Talud z (H/V)", min_value=0.0, value=1.0)
     y, A, P, R, V, Fr = canal_trapezoidal(Q, b, z, S, n)
 
-    fig, ax = plt.subplots(figsize=(5,3))
+    fig, ax = plt.subplots(figsize=(6,6))
     ax.plot([-b/2, b/2], [0,0], linewidth=4, label="Base")
     ax.plot([-b/2, -b/2 - z*y], [0,y], label="Talud izquierdo")
     ax.plot([b/2, b/2 + z*y], [0,y], label="Talud derecho")
@@ -122,7 +122,7 @@ else:
     D = st.sidebar.number_input("Diámetro D (m)", min_value=0.2, value=1.0)
     y, A, P, R, V, Fr = alcantarilla_circular(Q, D, S, n)
 
-    fig, ax = plt.subplots(figsize=(4,3))
+    fig, ax = plt.subplots(figsize=(6,6))
     circle = plt.Circle((D/2,D/2), D/2, fill=False, linewidth=2, label="Alcantarilla")
     ax.add_patch(circle)
     ax.hlines(y, 0, D, linestyles="--", label="Tirante normal")
@@ -174,7 +174,7 @@ if st.button("📥 Generar PDF"):
     ])
     e.append(table)
     e.append(Spacer(1,10))
-    e.append(Image("seccion.png", width=14*cm, height=7*cm))
+    e.append(Image("seccion.png", width=14*cm, height=14*cm))
 
     doc.build(e)
     st.success("PDF generado correctamente")
