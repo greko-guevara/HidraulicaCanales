@@ -184,7 +184,7 @@ def alcantarilla_circular(Q, D, S, n):
         # Froude
         Fr = V / np.sqrt(g * A / T)
         if Q_calc >= Q:
-            return y, A, P, R, V, Fr
+            break
         y += dy
     
     return y, A, P, R, V, Fr,
