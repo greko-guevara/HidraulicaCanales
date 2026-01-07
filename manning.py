@@ -151,34 +151,32 @@ def canal_trapezoidal(Q, b, z, S, n):
         P = b + 2*y*np.sqrt(1 + z**2)
         R = A / P
         V = (1/n) * R**(2/3) * (S/100)**0.5
+        T = b + 2*z*y
+        Fr = V / np.sqrt(g * A / T)
         if A * V >= Q:
             break
         y += dy
-    T = b + 2*z*y
-    Fr = V / np.sqrt(g * A / T)
+    
     return y, A, P, R, V, Fr
 
 def alcantarilla_circular(Q, D, S, n):
-    dy = 0.001
-    y = dy
     dy = 0.001
     y = dy
     max_iter = 100000
     for _ in range(max_iter):
         r = D / 2
         theta = 2 * np.arccos((r - y) / r)
-
-        A = (r**2 / 2) * (theta - np.sin(theta))
+        A = (D**2 / 8 ) * (theta - np.sin(theta))
         P = r * theta
         R = A / P
         T = 2 * r * np.sin(theta / 2)
         V = (1/n) * R**(2/3) * (S/100)**0.5  # Manning
         Q_calc = A * V
+        Fr = V / np.sqrt(g*A/T)
         if Q_calc >= Q:
             break
         y += dy
-    Fr = V / np.sqrt(g*A/T)
- 
+    
     return y, A, P, R, V, Fr,
 
 # ===============================
