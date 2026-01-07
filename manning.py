@@ -25,6 +25,9 @@ st.markdown(
     "Prof. Gregory Guevara — Riego & Drenaje / Universidad EARTH"
 )
 
+
+
+
 # ===============================
 # Sidebar – Tipo de sección
 # ===============================
@@ -33,6 +36,8 @@ seccion = st.sidebar.selectbox(
     "Seleccione la sección hidráulica",
     ["Canal trapezoidal", "Alcantarilla circular"]
 )
+
+
 
 # ===============================
 # Entradas comunes
@@ -64,107 +69,6 @@ elif material == "Tierra uniforme 0.025":
 else:
     n = 0.032
 
-# ===============================
-# Funciones hidráulicas
-# ===============================
-def canal_trapezoidal(Q, b, z, S, n):
-    dy = 0.001
-    y = dy
-    for _ in range(100000):
-        A = (b + z*y) * y
-        P = b + 2*y*np.sqrt(1 + z**2)
-        R = A / P
-        V = (1/n) * R**(2/3) * (S/100)**0.5
-        if A * V >= Q:
-            break
-        y += dy
-    T = b + 2*z*y
-    Fr = V / np.sqrt(g * A / T)
-    return y, A, P, R, V, Fr
-
-def alcantarilla_circular(Q, D, S, n):
-    dy = 0.001
-    y = dy
-    dy = 0.001
-    y = dy
-    max_iter = 100000
-    for _ in range(max_iter):
-        A = np.pi * (y/2)**2
-        P = np.pi * y
-        R = A / P
-        V = (1/n) * R**(2/3) * (S/100)**0.5  # Manning
-        Q_calc = A * V
-        if Q_calc >= Q:
-            break
-        y += dy
-    Fr = V / np.sqrt(g*A/D)
- 
-    return y, A, P, R, V, Fr,
-
-# ===============================
-# Cálculo
-# ===============================
-if seccion == "Canal trapezoidal":
-    b = st.sidebar.number_input("Base b (m)", min_value=0.1, value=0.5)
-    z = st.sidebar.number_input("Talud z (H/V)", min_value=0.0, value=1.0)
-    y, A, P, R, V, Fr = canal_trapezoidal(Q, b, z, S, n)
-
-    fig, ax = plt.subplots(figsize=(6,6))
-    ax.plot([-b/2, b/2], [0,0], linewidth=4, label="Base")
-    ax.plot([-b/2, -b/2 - z*y], [0,y], label="Talud izquierdo")
-    ax.plot([b/2, b/2 + z*y], [0,y], label="Talud derecho")
-    ax.hlines(y, -b/2 - z*y, b/2 + z*y, linestyles="--", label="Tirante normal")
-    ax.set_title("Sección transversal – Canal trapezoidal")
-    ax.set_aspect("equal")
-    ax.legend()
-    ax.grid(True, linestyle=":")
-else:
-    D = st.sidebar.number_input("Diámetro D (m)", min_value=0.2, value=1.0)
-    y, A, P, R, V, Fr = alcantarilla_circular(Q, D, S, n)
-
-    fig, ax = plt.subplots(figsize=(6,6))
-    circle = plt.Circle((D/2,D/2), D/2, fill=False, linewidth=2, label="Alcantarilla")
-    ax.add_patch(circle)
-    ax.hlines(y, 0, D, linestyles="--", label="Tirante normal")
-    ax.set_title("Sección transversal – Alcantarilla circular")
-    ax.set_aspect("equal")
-    ax.legend()
-    ax.grid(True, linestyle=":")
-
-fig.savefig("seccion.png", dpi=150)
-st.pyplot(fig)
-
-# ===============================
-# Resultados
-# ===============================
-st.header("📊 Resultados hidráulicos")
-
-col1, col2 = st.columns(2)
-with col1:
-    st.metric("Tirante normal y (m)", round(y,3))
-    st.metric("Área A (m²)", round(A,3))
-with col2:
-    st.metric("Velocidad V (m/s)", round(V,3))
-    st.metric("Número de Froude", round(Fr,3))
-
-st.write(f"**Perímetro mojado P:** {round(P,3)} m")
-st.write(f"**Radio hidráulico R:** {round(R,3)} m")
-
-if Fr < 1:
-    regimen = "Subcrítico"
-elif Fr == 1:
-    regimen = "Crítico"
-else:
-    regimen = "Supercrítico"
-
-st.info(f"🟢 Régimen del flujo: **{regimen}**")
-
-
-if seccion == "Canal trapezoidal" and V > 2.5:
-    st.warning("⚠️ Velocidad elevada: riesgo de erosión del canal.")
-
-if seccion == "Alcantarilla circular" and y/D > 0.9:
-    st.warning("⚠️ Alcantarilla trabajando casi llena.")
 
 # ===============================
 # Ayuda teórica
@@ -233,6 +137,110 @@ with st.expander("📘 Ayuda teórica"):
 
 
 
+
+# ===============================
+# Funciones hidráulicas
+# ===============================
+def canal_trapezoidal(Q, b, z, S, n):
+    dy = 0.001
+    y = dy
+    for _ in range(100000):
+        A = (b + z*y) * y
+        P = b + 2*y*np.sqrt(1 + z**2)
+        R = A / P
+        V = (1/n) * R**(2/3) * (S/100)**0.5
+        if A * V >= Q:
+            break
+        y += dy
+    T = b + 2*z*y
+    Fr = V / np.sqrt(g * A / T)
+    return y, A, P, R, V, Fr
+
+def alcantarilla_circular(Q, D, S, n):
+    dy = 0.001
+    y = dy
+    dy = 0.001
+    y = dy
+    max_iter = 100000
+    for _ in range(max_iter):
+        A = np.pi * (y/2)**2
+        P = np.pi * y
+        R = A / P
+        V = (1/n) * R**(2/3) * (S/100)**0.5  # Manning
+        Q_calc = A * V
+        if Q_calc >= Q:
+            break
+        y += dy
+    Fr = V / np.sqrt(g*A/D)
+ 
+    return y, A, P, R, V, Fr,
+
+# ===============================
+# Cálculo
+# ===============================
+if seccion == "Canal trapezoidal":
+    b = st.sidebar.number_input("Base b (m)", min_value=0.1, value=0.5)
+    z = st.sidebar.number_input("Talud z (H/V)", min_value=0.0, value=1.0)
+    y, A, P, R, V, Fr = canal_trapezoidal(Q, b, z, S, n)
+
+    fig, ax = plt.subplots(figsize=(6,6))
+    ax.plot([-b/2, b/2], [0,0], linewidth=4, label="Base")
+    ax.plot([-b/2, -b/2 - z*y], [0,y], label="Talud izquierdo")
+    ax.plot([b/2, b/2 + z*y], [0,y], label="Talud derecho")
+    ax.hlines(y, -b/2 - z*y, b/2 + z*y, linestyles="--", label="Tirante normal")
+    ax.set_title("Sección transversal – Canal trapezoidal")
+    ax.set_aspect("equal")
+    ax.legend()
+    ax.grid(True, linestyle=":")
+else:
+    D = st.sidebar.number_input("Diámetro D (m)", min_value=0.2, value=1.0)
+    y, A, P, R, V, Fr = alcantarilla_circular(Q, D, S, n)
+
+    fig, ax = plt.subplots(figsize=(4,4))
+    circle = plt.Circle((D/2,D/2), D/2, fill=False, linewidth=2, label="Alcantarilla")
+    ax.add_patch(circle)
+    ax.hlines(y, 0, D, linestyles="--", label="Tirante normal")
+    ax.set_title("Sección transversal – Alcantarilla circular")
+    ax.set_aspect("equal")
+    ax.legend()
+    ax.grid(True, linestyle=":")
+
+fig.savefig("seccion.png", dpi=150)
+st.pyplot(fig)
+
+# ===============================
+# Resultados
+# ===============================
+st.header("📊 Resultados hidráulicos")
+
+col1, col2 = st.columns(2)
+with col1:
+    st.metric("Tirante normal y (m)", round(y,3))
+    st.metric("Área A (m²)", round(A,3))
+with col2:
+    st.metric("Velocidad V (m/s)", round(V,3))
+    st.metric("Número de Froude", round(Fr,3))
+
+st.write(f"**Perímetro mojado P:** {round(P,3)} m")
+st.write(f"**Radio hidráulico R:** {round(R,3)} m")
+
+if Fr < 1:
+    regimen = "Subcrítico"
+elif Fr == 1:
+    regimen = "Crítico"
+else:
+    regimen = "Supercrítico"
+
+st.info(f"🟢 Régimen del flujo: **{regimen}**")
+
+
+if seccion == "Canal trapezoidal" and V > 2.5:
+    st.warning("⚠️ Velocidad elevada: riesgo de erosión del canal.")
+
+if seccion == "Alcantarilla circular" and y/D > 0.9:
+    st.warning("⚠️ Alcantarilla trabajando casi llena.")
+
+
 # ===============================
 # PDF
 # ===============================
@@ -249,6 +257,11 @@ if st.button("📥 Generar PDF"):
     e.append(Paragraph(f"Tipo de sección: {seccion}", styles["Normal"]))
     e.append(Paragraph(f"Material: {material}", styles["Normal"]))
     e.append(Paragraph(f"Caudal Q = {Q} m³/s | Pendiente S = {S} %", styles["Normal"]))
+    if seccion == "Canal trapezoidal":
+        e.append(Paragraph(f"Base b = {b} m | Taluz Z = {z} %", styles["Normal"]))    
+    else:
+        e.append(Paragraph(f"Diámetro D = {D} m" , styles["Normal"]))    
+
     e.append(Spacer(1,6))
 
     table = Table([
