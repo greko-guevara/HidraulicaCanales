@@ -52,7 +52,7 @@ S = st.sidebar.number_input("Pendiente S (%)", min_value=0.01, value=0.5, step=0
 if seccion == "Canal trapezoidal":
     material = st.sidebar.selectbox(
         "Material del canal",
-        ["Concreto 0.014", "Plástico (PVC / PEAD) 0.011","Tierra uniforme 0.025", "Suelo expuesto 0.032"]
+        ["Concreto 0.014", "Plástico (PVC / PEAD) 0.011","Tierra uniforme 0.025", "Suelo expuesto 0.032", "Surcos 0.040"]
     )
 else:
     material = st.sidebar.selectbox(
@@ -66,6 +66,8 @@ elif "Plástico (PVC / PEAD)" in material:
     n = 0.011
 elif material == "Tierra uniforme 0.025":
     n = 0.025
+elif material == "Surcos 0.040":
+    n= 0.040
 else:
     n = 0.032
 
@@ -231,7 +233,7 @@ elif Fr == 1:
 else:
     regimen = "Supercrítico"
 
-st.info(f"🟢 Régimen del flujo: **{regimen}**")
+st.info(f" Régimen del flujo: **{regimen}**")
 
 
 if seccion == "Canal trapezoidal" and V > 2.5:
