@@ -260,7 +260,7 @@ if st.button("📥 Generar PDF"):
     e.append(Paragraph(f"Material: {material}", styles["Normal"]))
     e.append(Paragraph(f"Caudal Q = {Q} m³/s | Pendiente S = {S} %", styles["Normal"]))
     if seccion == "Canal trapezoidal":
-        e.append(Paragraph(f"Base b = {b} m | Taluz Z = {z} %", styles["Normal"]))    
+        e.append(Paragraph(f"Base b = {b} m | Talud Z = {z} m/m", styles["Normal"]))    
     else:
         e.append(Paragraph(f"Diámetro D = {D} m" , styles["Normal"]))    
 
