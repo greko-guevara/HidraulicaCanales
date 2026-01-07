@@ -85,21 +85,21 @@ def canal_trapezoidal(Q, b, z, S, n):
 def alcantarilla_circular(Q, D, S, n):
     dy = 0.001
     y = dy
-    for _ in range(100000):
-        if y >= D:
-            y = D
-            break
-        theta = 2 * np.arccos(1 - 2*y/D)
-        A = (D**2 / 8) * (theta - np.sin(theta))
-        P = (D / 2) * theta
+    dy = 0.001
+    y = dy
+    max_iter = 100000
+    for _ in range(max_iter):
+        A = np.pi * (y/2)**2
+        P = np.pi * y
         R = A / P
-        V = (1/n) * R**(2/3) * (S/100)**0.5
-        if A * V >= Q:
+        V = (1/n) * R**(2/3) * (S/100)**0.5  # Manning
+        Q_calc = A * V
+        if Q_calc >= Q:
             break
         y += dy
-    T = D * np.sin(theta/2)
-    Fr = V / np.sqrt(g * A / T)
-    return y, A, P, R, V, Fr
+    Fr = V / np.sqrt(g*A/D)
+ 
+    return y, A, P, R, V, Fr,
 
 # ===============================
 # Cálculo
@@ -149,6 +149,89 @@ with col2:
 
 st.write(f"**Perímetro mojado P:** {round(P,3)} m")
 st.write(f"**Radio hidráulico R:** {round(R,3)} m")
+
+if Fr < 1:
+    regimen = "Subcrítico"
+elif Fr == 1:
+    regimen = "Crítico"
+else:
+    regimen = "Supercrítico"
+
+st.info(f"🟢 Régimen del flujo: **{regimen}**")
+
+
+if seccion == "Canal trapezoidal" and V > 2.5:
+    st.warning("⚠️ Velocidad elevada: riesgo de erosión del canal.")
+
+if seccion == "Alcantarilla circular" and y/D > 0.9:
+    st.warning("⚠️ Alcantarilla trabajando casi llena.")
+
+# ===============================
+# Ayuda teórica
+# ===============================
+with st.expander("📘 Ayuda teórica"):
+    st.markdown("### 🔹 Flujo uniforme (tirante normal)")
+    st.markdown("""
+    El **tirante normal** corresponde a una condición de **flujo uniforme**, donde:
+    - La pendiente del fondo del canal es igual a la pendiente de la línea de energía.
+    - La profundidad del flujo permanece constante a lo largo del canal.
+    """)
+
+    st.markdown("### 🔹 Ecuación de Manning")
+    st.latex(r"""
+    Q = \frac{1}{n} \, A \, R^{2/3} \, S^{1/2}
+    """)
+    st.markdown("""
+    Donde:
+    - **Q**: caudal (m³/s)  
+    - **n**: coeficiente de rugosidad de Manning  
+    - **A**: área hidráulica (m²)  
+    - **R**: radio hidráulico (A/P)  
+    - **S**: pendiente del canal (m/m)
+    """)
+
+    st.markdown("### 🔹 Geometría hidráulica")
+    if seccion == "Canal trapezoidal":
+        st.latex(r"""
+        A = y (b + z y)
+        """)
+        st.latex(r"""
+        P = b + 2y\sqrt{1+z^2}
+        """)
+        st.latex(r"""
+        T = b + 2zy
+        """)
+        st.markdown("""
+        Donde:
+        - **b**: base del canal (m)  
+        - **z**: talud lateral (H/V)  
+        - **y**: tirante normal (m)
+        """)
+    else:
+        st.latex(r"""
+        A = \frac{D^2}{8}(\theta - \sin\theta)
+        """)
+        st.latex(r"""
+        P = \frac{D}{2}\theta
+        """)
+        st.markdown("""
+        Para alcantarillas circulares:
+        - El cálculo se realiza para **flujo parcial**.
+        - El ángulo central **θ** depende del tirante y el diámetro.
+        """)
+
+    st.markdown("### 🔹 Número de Froude")
+    st.latex(r"""
+    Fr = \frac{V}{\sqrt{g \cdot \frac{A}{T}}}
+    """)
+    st.markdown("""
+    Interpretación:
+    - **Fr < 1** → flujo subcrítico  
+    - **Fr = 1** → flujo crítico  
+    - **Fr > 1** → flujo supercrítico
+    """)
+
+
 
 # ===============================
 # PDF
