@@ -165,15 +165,19 @@ def alcantarilla_circular(Q, D, S, n):
     y = dy
     max_iter = 100000
     for _ in range(max_iter):
-        A = np.pi * (y/2)**2
-        P = np.pi * y
+        r = D / 2
+        theta = 2 * np.arccos((r - y) / r)
+
+        A = (r**2 / 2) * (theta - np.sin(theta))
+        P = r * theta
         R = A / P
+        T = 2 * r * np.sin(theta / 2)
         V = (1/n) * R**(2/3) * (S/100)**0.5  # Manning
         Q_calc = A * V
         if Q_calc >= Q:
             break
         y += dy
-    Fr = V / np.sqrt(g*A/D)
+    Fr = V / np.sqrt(g*A/T)
  
     return y, A, P, R, V, Fr,
 
