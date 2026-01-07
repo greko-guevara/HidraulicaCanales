@@ -44,7 +44,7 @@ seccion = st.sidebar.selectbox(
 # ===============================
 st.sidebar.header("🔧 Parámetros hidráulicos")
 Q = st.sidebar.number_input("Caudal Q (m³/s)", min_value=0.01, value=1.0, step=0.01)
-S = st.sidebar.number_input("Pendiente S (%)", min_value=0.01, value=0.5, step=0.01)
+S = st.sidebar.number_input("Pendiente S (%)", min_value=0.001, value=0.1, step=0.01)
 
 # ===============================
 # Material (con restricciones)
